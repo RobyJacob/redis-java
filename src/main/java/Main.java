@@ -27,7 +27,7 @@ public class Main {
                 writer = new PrintWriter(clientSocket.getOutputStream(), true);
                 reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
-                writer.print("+PONG\r\n");
+                writer.println("+PONG\r");
             } catch (IOException e) {
                 System.out.println("IOException: " + e.getMessage());
             } finally {
