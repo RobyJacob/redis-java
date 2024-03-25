@@ -3,7 +3,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.Buffer;
 import java.nio.charset.StandardCharsets;
 
 public class Main {
@@ -26,9 +25,16 @@ public class Main {
 
             reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
-            while (reader.readLine() != null) {
-                respondToClient(clientSocket);
-            } 
+            String input = "";
+            while (true) {
+                input = reader.readLine();
+
+                if (input == null) continue;
+
+                if (input.contains("ping")) {
+                    respondToClient(clientSocket);
+                };
+            }
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
         } finally {
@@ -44,6 +50,7 @@ public class Main {
 
     private static void respondToClient(Socket clientSocket) throws IOException {
         String response = "+PONG\r\n";
+
         clientSocket.getOutputStream().write(response.getBytes(StandardCharsets.UTF_8));
     }
 }
