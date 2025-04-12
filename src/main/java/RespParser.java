@@ -20,38 +20,48 @@ public class RespParser {
         }
     }
 
-    private Stack<Character> operator;
-    private Stack<Integer> size;
-    private final String CRLF = "\\r\\n";
+    private List<String> parsedValues;
+    private int expectedNumArgs;
+    private final String CRLF = "\r\n";
+    private int size;
 
     RespParser() {
-        operator = new Stack<>();
-        size = new Stack<>();
+        parsedValues = new ArrayList<>();
+        expectedNumArgs = -1;
+        size = -1;
     }
 
-    void parse(String respString) {
-        for (String str : respString.split(CRLF)) {
-            if (Arrays.stream(Operand.values()).anyMatch(op -> op.typeChar.equals(str.charAt(0)))) {
-                operator.push(str.charAt(0));
-                size.push(Integer.parseInt(str.substring(1)));
-            } else {
-                if (!size.peek().equals(str.length()))
-                    throw new RuntimeException("Size does not match");
+    boolean feed(String respString) {
+        Character prefix = respString.charAt(0);
+        
+        switch(prefix) {
+            case '*':
+                expectedNumArgs = Integer.parseInt(respString.substring(1));
+                break;
+            case '$':
+                size = Integer.parseInt(respString.substring(1));
+                break;
+            
+            default:
+                if (size == respString.length()) {
+                    parsedValues.add(respString);
 
-                if (Commands.isCommand(str))
-                    Commands.add(str);
-                else
-                    Commands.addArgs(List.of(str));
-            }
+                    if (parsedValues.size() == expectedNumArgs) {
+                        String command = parsedValues.get(0);
+                        String arg = parsedValues.get(1);
+                        if (Commands.isCommand(command)) {
+                            Commands.add(command); 
+                            Commands.addArg(arg);
+                        }
+                        parsedValues.clear();
+                        expectedNumArgs = -1;
+                        size = -1;
+                        return true;
+                    }
+                }
         }
 
-        while (!operator.isEmpty() && !size.isEmpty()) {
-            operator.pop();
-            size.pop();
-        }
-
-        if (!operator.isEmpty() || !size.isEmpty())
-            throw new RuntimeException("Request is invalid");
+        return false;
     }
 
     String convertToResp(String str) {

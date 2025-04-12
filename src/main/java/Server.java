@@ -1,17 +1,12 @@
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import org.xml.sax.InputSource;
 
 public class Server {
     private ServerSocket serverSocket = null;
@@ -38,7 +33,7 @@ public class Server {
     }
 
     public void respondToClient(Socket clientSocket, String response) throws IOException {
-        clientSocket.getOutputStream().write(response.concat("\n").getBytes(StandardCharsets.UTF_8));
+        clientSocket.getOutputStream().write(response.getBytes(StandardCharsets.UTF_8));
     }
 
     public void listen() throws IOException {
@@ -52,9 +47,10 @@ public class Server {
                     String input;
                     while ((input = reader.readLine()) != null) {
                         System.out.println("Received input: " + input);
-                        parser.parse(input.replace("\\r\\n", "\r\n").trim());
-                        String resp = parser.convertToResp(Commands.process());
-                        respondToClient(clientSocket, resp);
+                        if (parser.feed(input)) {
+                            String resp = parser.convertToResp(Commands.process());
+                            respondToClient(clientSocket, resp);
+                        }
                     }
                 } catch (IOException e) {
                     throw new RuntimeException(e);

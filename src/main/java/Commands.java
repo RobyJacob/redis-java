@@ -3,7 +3,7 @@ import java.util.*;
 public class Commands {
     private static Map<String, Keywords> commandMap = new HashMap<>();
 
-    private static Optional<List<String>> arguments = Optional.of(new ArrayList<>());
+    private static String argument = "";
 
     private static Keywords processingCommand;
 
@@ -23,9 +23,7 @@ public class Commands {
         ECHO("echo") {
             @Override
             public String process() {
-                StringBuilder builder = new StringBuilder();
-                arguments.ifPresent(args -> builder.append(args.get(args.size() - 1)));
-                return builder.toString();
+                return argument;
             }
         };
 
@@ -53,8 +51,8 @@ public class Commands {
         processingCommand = commandMap.get(comm.toLowerCase());
     }
 
-    public static void addArgs(List<String> args) {
-        arguments.ifPresent(argumentList -> argumentList.addAll(args));
+    public static void addArg(String arg) {
+        argument = arg;
     }
 
     public static String process() {
