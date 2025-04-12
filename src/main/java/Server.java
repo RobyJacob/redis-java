@@ -1,53 +1,60 @@
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import org.xml.sax.InputSource;
 
 public class Server {
     private ServerSocket serverSocket = null;
     private int port = 6379;
     private ExecutorService threadPool = null;
-    private final int NUM_THREADS = 5;
+    private int num_threads = 5;
+    private final RespParser parser = new RespParser();
 
     Server() throws IOException {
-        this.initServer();
+        initServer();
     }
 
-    Server(int port) throws IOException {
+    Server(int port, int num_threads) throws IOException {
         this.port = port;
-        this.initServer();
+        this.num_threads = num_threads;
+        initServer();
     }
 
     private void initServer() throws IOException {
-        this.serverSocket = new ServerSocket(this.port);
-        this.serverSocket.setReuseAddress(true);
-        this.threadPool = Executors.newFixedThreadPool(this.NUM_THREADS);
+        serverSocket = new ServerSocket(port);
+        serverSocket.setReuseAddress(true);
+        threadPool = Executors.newFixedThreadPool(this.num_threads);
         System.out.println("Server started successfully");
     }
 
-    public void respondToClient(Socket clientSocket) throws IOException {
-        String response = "+PONG\r\n";
-
-        clientSocket.getOutputStream().write(response.getBytes(StandardCharsets.UTF_8));
+    public void respondToClient(Socket clientSocket, String response) throws IOException {
+        clientSocket.getOutputStream().write(response.concat("\n").getBytes(StandardCharsets.UTF_8));
     }
 
     public void listen() throws IOException {
         while (true) {
-            Socket clientSocket = this.serverSocket.accept();
+            Socket clientSocket = serverSocket.accept();
             BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
             this.threadPool.execute(() -> {
                 try {
-                    System.out.println("Server started listening on port " + this.port);
-                    String input = "";
+                    System.out.println("Server started listening on port " + port);
+                    String input;
                     while ((input = reader.readLine()) != null) {
                         System.out.println("Received input: " + input);
-                        if (input.contains("ping"))
-                            this.respondToClient(clientSocket);
+                        parser.parse(input.replace("\\r\\n", "\r\n").trim());
+                        String resp = parser.convertToResp(Commands.process());
+                        respondToClient(clientSocket, resp);
                     }
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -57,7 +64,7 @@ public class Server {
     }
 
     public  void close() throws IOException {
-        if (this.serverSocket != null) this.serverSocket.close();
-        if (this.threadPool != null) this.threadPool.shutdown();
+        if (serverSocket != null) serverSocket.close();
+        if (threadPool != null) threadPool.shutdown();
     }
 }
