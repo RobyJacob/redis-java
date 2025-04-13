@@ -18,6 +18,10 @@ public class Commands {
             @Override
             public String process(List<String> args) {
                 String fetchedData = Data.get(args.get(0));
+                
+                if (fetchedData.equals("-1"))
+                    return Utility.convertToResp(fetchedData, RespParser.Operand.ERROR);
+
                 return Utility.convertToResp(fetchedData, RespParser.Operand.BULKSTRING);
             }
         },
@@ -37,7 +41,7 @@ public class Commands {
                 return Utility.convertToResp(echoedString, RespParser.Operand.BULKSTRING);
             }
         },
-        
+
         PING("ping") {
             @Override
             public String process(List<String> args) {
