@@ -22,16 +22,18 @@ public class RespParser {
 
     private List<String> parsedValues;
     private int expectedNumArgs;
-    private final String CRLF = "\r\n";
     private int size;
+    private Commands commands;
+    private String resultResp;
 
     RespParser() {
         parsedValues = new ArrayList<>();
         expectedNumArgs = -1;
         size = -1;
+        commands = new Commands();
     }
 
-    boolean feed(String respString) {
+    public boolean feed(String respString) {
         Character prefix = respString.charAt(0);
         
         switch(prefix) {
@@ -48,6 +50,7 @@ public class RespParser {
 
                     if (expectedNumArgs != -1 && parsedValues.size() == expectedNumArgs) {
                         processParsedValues();
+
                         return true;
                     }
                 } else {
@@ -58,28 +61,25 @@ public class RespParser {
         return false;
     }
 
-    String convertToResp(String str) {
-        StringBuilder builder = new StringBuilder();
-
-        builder.append(Operand.BULKSTRING)
-                .append(str.length())
-                .append(CRLF)
-                .append(str)
-                .append(CRLF);
-
-        return builder.toString();
+    public String getResult() {
+        return resultResp;
     }
 
     private void processParsedValues() {
         String command = parsedValues.get(0);
         boolean withArg = expectedNumArgs > 1;
-        String arg = withArg ? parsedValues.get(1) : "";
-        if (Commands.isCommand(command)) {
-            Commands.add(command); 
-            if (withArg) Commands.addArg(arg);
+        List<String> arg = withArg ? parsedValues.subList(1, parsedValues.size()) : Collections.emptyList();
+
+        if (commands.isCommand(command)) {
+            commands.add(command); 
+
+            if (withArg) commands.addArg(arg);
+            
+            resultResp = commands.process();
         } else {
             throw new RuntimeException("Invalid command found: %s".formatted(command));
         }
+
         parsedValues.clear();
         expectedNumArgs = -1;
         size = -1;

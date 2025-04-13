@@ -4,7 +4,6 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -13,7 +12,6 @@ public class Server {
     private int port = 6379;
     private ExecutorService threadPool = null;
     private int num_threads = 5;
-    private final RespParser parser = new RespParser();
 
     Server() throws IOException {
         initServer();
@@ -39,17 +37,19 @@ public class Server {
     public void listen() throws IOException {
         while (true) {
             Socket clientSocket = serverSocket.accept();
+            RespParser parser = new RespParser();
             BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
             this.threadPool.execute(() -> {
                 try {
                     System.out.println("Server started listening on port " + port);
                     String input;
+
                     while ((input = reader.readLine()) != null) {
                         System.out.println("Received input: " + input);
+
                         if (parser.feed(input)) {
-                            String resp = parser.convertToResp(Commands.process());
-                            respondToClient(clientSocket, resp);
+                            respondToClient(clientSocket, parser.getResult());
                         }
                     }
                 } catch (IOException e) {

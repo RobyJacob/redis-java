@@ -1,35 +1,47 @@
 import java.util.*;
 
 public class Commands {
-    private static Map<String, Keywords> commandMap = new HashMap<>();
+    private Map<String, Keywords> commandMap;
 
-    private static String argument = "";
+    private List<String> arguments;
 
-    private static Keywords processingCommand;
+    private Keywords processingCommand;
+
+    Commands() {
+        commandMap = new HashMap<>();
+        arguments = new ArrayList<>();
+        Arrays.stream(CommandKeywords.values()).forEach(k -> commandMap.put(k.toString(), k));
+    }
 
     enum CommandKeywords implements Keywords {
         GET("get") {
             @Override
-            public String process() {
-                return "GET invoked";
+            public String process(List<String> args) {
+                String fetchedData = Data.get(args.get(0));
+                return Utility.convertToResp(fetchedData, RespParser.Operand.BULKSTRING);
             }
         },
+
         SET("set") {
             @Override
-            public String process() {
-                return "SET invoked";
+            public String process(List<String> args) {
+                Data.add(args.get(0), args.get(1));
+                return Utility.convertToResp("OK", RespParser.Operand.STRING);
             }
         },
+
         ECHO("echo") {
             @Override
-            public String process() {
-                return argument;
+            public String process(List<String> args) {
+                String echoedString = args.get(0);
+                return Utility.convertToResp(echoedString, RespParser.Operand.BULKSTRING);
             }
         },
+        
         PING("ping") {
             @Override
-            public String process() {
-                return "PONG";
+            public String process(List<String> args) {
+                return Utility.convertToResp("PONG", RespParser.Operand.BULKSTRING);
             }
         };
 
@@ -45,27 +57,29 @@ public class Commands {
         }
     }
 
-    static {
-        Arrays.stream(CommandKeywords.values()).forEach(k -> commandMap.put(k.toString(), k));
-    }
-
-    public static Boolean isCommand(String comm) {
+    public Boolean isCommand(String comm) {
         return commandMap.containsKey(comm.toLowerCase());
     }
 
-    public static void add(String comm) {
+    public void add(String comm) {
         processingCommand = commandMap.get(comm.toLowerCase());
     }
 
-    public static void addArg(String arg) {
-        argument = arg;
+    public void addArg(List<String> arg) {
+        arguments.addAll(arg);
     }
 
-    public static String process() {
-        return processingCommand.process();
+    public String process() {
+        String result = processingCommand.process(arguments);
+        clearArgs();
+        return result;
+    }
+
+    private void clearArgs() {
+        arguments.clear();
     }
 }
 
 interface Keywords {
-    public String process();
+    public String process(List<String> args);
 }
