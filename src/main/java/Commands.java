@@ -25,6 +25,12 @@ public class Commands {
             public String process() {
                 return argument;
             }
+        },
+        PING("ping") {
+            @Override
+            public String process() {
+                return "PONG";
+            }
         };
 
         private final String keyword;

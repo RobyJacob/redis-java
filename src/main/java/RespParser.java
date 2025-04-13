@@ -46,18 +46,12 @@ public class RespParser {
                 if (size == respString.length()) {
                     parsedValues.add(respString);
 
-                    if (parsedValues.size() == expectedNumArgs) {
-                        String command = parsedValues.get(0);
-                        String arg = parsedValues.get(1);
-                        if (Commands.isCommand(command)) {
-                            Commands.add(command); 
-                            Commands.addArg(arg);
-                        }
-                        parsedValues.clear();
-                        expectedNumArgs = -1;
-                        size = -1;
+                    if (expectedNumArgs != -1 && parsedValues.size() == expectedNumArgs) {
+                        processParsedValues();
                         return true;
                     }
+                } else {
+                    throw new RuntimeException("Size does not match: %s".formatted(respString));
                 }
         }
 
@@ -74,5 +68,20 @@ public class RespParser {
                 .append(CRLF);
 
         return builder.toString();
+    }
+
+    private void processParsedValues() {
+        String command = parsedValues.get(0);
+        boolean withArg = expectedNumArgs > 1;
+        String arg = withArg ? parsedValues.get(1) : "";
+        if (Commands.isCommand(command)) {
+            Commands.add(command); 
+            if (withArg) Commands.addArg(arg);
+        } else {
+            throw new RuntimeException("Invalid command found: %s".formatted(command));
+        }
+        parsedValues.clear();
+        expectedNumArgs = -1;
+        size = -1;
     }
 }
