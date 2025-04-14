@@ -17,19 +17,28 @@ public class Commands {
         GET("get") {
             @Override
             public String process(List<String> args) {
-                String fetchedData = Data.get(args.get(0));
+                String key = Data.get(args.get(0));
                 
-                if (fetchedData.equals("-1"))
-                    return Utility.convertToResp(fetchedData, RespParser.Operand.ERROR);
+                if (key == null)
+                    return Utility.convertToResp("1", RespParser.Operand.ERROR);
 
-                return Utility.convertToResp(fetchedData, RespParser.Operand.BULKSTRING);
+                return Utility.convertToResp(key, RespParser.Operand.BULKSTRING);
             }
         },
 
         SET("set") {
             @Override
             public String process(List<String> args) {
-                Data.add(args.get(0), args.get(1));
+                String key = args.get(0);
+                String val = args.get(1);
+
+                Data.add(key, val);
+
+                if (args.size() > 2 && args.get(2).toLowerCase().equals("px")) {
+                    long expiryMilliseconds = Long.valueOf(args.get(3));
+                    Data.add(key, val, expiryMilliseconds);
+                }
+
                 return Utility.convertToResp("OK", RespParser.Operand.STRING);
             }
         },
