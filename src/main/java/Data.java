@@ -3,21 +3,26 @@ import java.util.List;
 import java.util.Map;
 
 public class Data {
-    private static Map<String, String> bufferMap = new HashMap<>();
-    private static Map<String, List<Long>> keyExpiry = new HashMap<>();
+    private Map<String, String> bufferMap;
+    private Map<String, List<Long>> keyExpiry;
 
-    public static void add(String key, String value) {
+    Data () {
+        bufferMap = new HashMap<>();
+        keyExpiry = new HashMap<>();
+    }
+
+    public void add(String key, String value) {
         bufferMap.put(key, value);
     }
 
-    public static void add(String key, String value, Long expiry) {
+    public void add(String key, String value, Long expiry) {
         add(key, value);
 
         long currentMilliseconds = System.currentTimeMillis();
         keyExpiry.put(key, List.of(currentMilliseconds, expiry));
     }
 
-    public static String get(String key) {
+    public String get(String key) {
         if (keyExpiry.containsKey(key)) {
             long currentMilliseconds = System.currentTimeMillis();
             long startMilliseconds = keyExpiry.get(key).get(0);

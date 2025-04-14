@@ -7,17 +7,20 @@ public class Commands {
 
     private Keywords processingCommand;
 
+    private Data data;
+
     Commands() {
         commandMap = new HashMap<>();
         arguments = new ArrayList<>();
+        data = new Data();
         Arrays.stream(CommandKeywords.values()).forEach(k -> commandMap.put(k.toString(), k));
     }
 
     enum CommandKeywords implements Keywords {
         GET("get") {
             @Override
-            public String process(List<String> args) {
-                String key = Data.get(args.get(0));
+            public String process(List<String> args, Data data) {
+                String key = data.get(args.get(0));
                 
                 if (key == null)
                     return Utility.convertToResp("1", RespParser.Operand.ERROR);
@@ -28,15 +31,15 @@ public class Commands {
 
         SET("set") {
             @Override
-            public String process(List<String> args) {
+            public String process(List<String> args, Data data) {
                 String key = args.get(0);
                 String val = args.get(1);
 
-                Data.add(key, val);
+                data.add(key, val);
 
                 if (args.size() > 2 && "px".equals(args.get(2).toLowerCase())) {
                     long expiryMilliseconds = Long.valueOf(args.get(3));
-                    Data.add(key, val, expiryMilliseconds);
+                    data.add(key, val, expiryMilliseconds);
                 }
 
                 return Utility.convertToResp("OK", RespParser.Operand.STRING);
@@ -45,7 +48,7 @@ public class Commands {
 
         ECHO("echo") {
             @Override
-            public String process(List<String> args) {
+            public String process(List<String> args, Data data) {
                 String echoedString = args.get(0);
                 return Utility.convertToResp(echoedString, RespParser.Operand.BULKSTRING);
             }
@@ -53,8 +56,24 @@ public class Commands {
 
         PING("ping") {
             @Override
-            public String process(List<String> args) {
+            public String process(List<String> args, Data data) {
                 return Utility.convertToResp("PONG", RespParser.Operand.BULKSTRING);
+            }
+        },
+        
+        INFO("info") {
+            @Override
+            public String process(List<String> args, Data data) {
+                String arg = args.get(0).toLowerCase();
+                String response = "";
+
+                switch (arg) {
+                    case "replication":
+                        response = Utility.convertToResp("role:master", RespParser.Operand.BULKSTRING);
+                        break;
+                }
+
+                return response;
             }
         };
 
@@ -83,7 +102,7 @@ public class Commands {
     }
 
     public String process() {
-        String result = processingCommand.process(arguments);
+        String result = processingCommand.process(arguments, data);
         clearArgs();
         return result;
     }
@@ -94,5 +113,5 @@ public class Commands {
 }
 
 interface Keywords {
-    public String process(List<String> args);
+    public String process(List<String> args, Data data);
 }
