@@ -34,7 +34,7 @@ public class Commands {
 
                 Data.add(key, val);
 
-                if (args.size() > 2 && args.get(2).toLowerCase().equals("px")) {
+                if (args.size() > 2 && "px".equals(args.get(2).toLowerCase())) {
                     long expiryMilliseconds = Long.valueOf(args.get(3));
                     Data.add(key, val, expiryMilliseconds);
                 }
