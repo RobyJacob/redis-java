@@ -53,9 +53,7 @@ public class RespParser {
 
                         return true;
                     }
-                } else {
-                    throw new RuntimeException("Size does not match: %s".formatted(respString));
-                }
+                } else throw new RuntimeException("Size does not match: %s".formatted(respString));
         }
 
         return false;

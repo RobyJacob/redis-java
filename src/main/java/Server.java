@@ -4,6 +4,8 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -12,6 +14,7 @@ public class Server {
     private int port = 6379;
     private ExecutorService threadPool = null;
     private int num_threads = 5;
+    private static Map<String, String> masterAddr = new HashMap<>();
 
     Server() throws IOException {
         initServer();
@@ -23,7 +26,7 @@ public class Server {
         initServer();
     }
 
-    Server (int port) throws IOException {
+    Server(int port) throws IOException {
         this.port = port;
         initServer();
     }
@@ -64,8 +67,18 @@ public class Server {
         }
     }
 
-    public  void close() throws IOException {
-        if (serverSocket != null) serverSocket.close();
-        if (threadPool != null) threadPool.shutdown();
+    public void close() throws IOException {
+        if (serverSocket != null)
+            serverSocket.close();
+        if (threadPool != null)
+            threadPool.shutdown();
+    }
+
+    public static void setMaster(Map<String, String> masterAddr) {
+        Server.masterAddr.putAll(masterAddr);
+    }
+
+    public static Map<String, String> getMaster() {
+        return masterAddr;
     }
 }

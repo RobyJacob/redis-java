@@ -66,10 +66,13 @@ public class Commands {
             public String process(List<String> args, Data data) {
                 String arg = args.get(0).toLowerCase();
                 String response = "";
+                String infoMessage = "role:master";
 
                 switch (arg) {
                     case "replication":
-                        response = Utility.convertToResp("role:master", RespParser.Operand.BULKSTRING);
+                        if (!Server.getMaster().isEmpty()) infoMessage = "role:slave";
+                        
+                        response = Utility.convertToResp(infoMessage, RespParser.Operand.BULKSTRING);
                         break;
                 }
 
