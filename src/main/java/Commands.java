@@ -69,7 +69,8 @@ public class Commands {
             public String process(List<String> args, Data data, ServerConfig config) {
                 String arg = args.get(0).toLowerCase();
                 String response = "";
-                String infoMessage = "role:master\nmaster_replid:8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb\nmaster_repl_offset:0";
+                String infoMessage = "role:master\nmaster_replid:%s\nmaster_repl_offset:%d"
+                    .formatted(config.getReplicationId(), config.getReplicationOffset());
 
                 switch (arg) {
                     case "replication":
