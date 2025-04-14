@@ -9,17 +9,20 @@ public class Commands {
 
     private Data data;
 
-    Commands() {
+    private ServerConfig serverConfig;
+
+    Commands(ServerConfig serverConfig) {
         commandMap = new HashMap<>();
         arguments = new ArrayList<>();
         data = new Data();
+        this.serverConfig = serverConfig;
         Arrays.stream(CommandKeywords.values()).forEach(k -> commandMap.put(k.toString(), k));
     }
 
     enum CommandKeywords implements Keywords {
         GET("get") {
             @Override
-            public String process(List<String> args, Data data) {
+            public String process(List<String> args, Data data, ServerConfig config) {
                 String key = data.get(args.get(0));
                 
                 if (key == null)
@@ -31,7 +34,7 @@ public class Commands {
 
         SET("set") {
             @Override
-            public String process(List<String> args, Data data) {
+            public String process(List<String> args, Data data, ServerConfig config) {
                 String key = args.get(0);
                 String val = args.get(1);
 
@@ -48,7 +51,7 @@ public class Commands {
 
         ECHO("echo") {
             @Override
-            public String process(List<String> args, Data data) {
+            public String process(List<String> args, Data data, ServerConfig config) {
                 String echoedString = args.get(0);
                 return Utility.convertToResp(echoedString, RespParser.Operand.BULKSTRING);
             }
@@ -56,21 +59,21 @@ public class Commands {
 
         PING("ping") {
             @Override
-            public String process(List<String> args, Data data) {
+            public String process(List<String> args, Data data, ServerConfig config) {
                 return Utility.convertToResp("PONG", RespParser.Operand.BULKSTRING);
             }
         },
         
         INFO("info") {
             @Override
-            public String process(List<String> args, Data data) {
+            public String process(List<String> args, Data data, ServerConfig config) {
                 String arg = args.get(0).toLowerCase();
                 String response = "";
-                String infoMessage = "role:master";
+                String infoMessage = "role:master\nmaster_replid:8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb\nmaster_repl_offset:0";
 
                 switch (arg) {
                     case "replication":
-                        if (!Server.getMaster().isEmpty()) infoMessage = "role:slave";
+                        if (!config.isMaster()) infoMessage = "role:slave";
                         
                         response = Utility.convertToResp(infoMessage, RespParser.Operand.BULKSTRING);
                         break;
@@ -105,7 +108,7 @@ public class Commands {
     }
 
     public String process() {
-        String result = processingCommand.process(arguments, data);
+        String result = processingCommand.process(arguments, data, serverConfig);
         clearArgs();
         return result;
     }
@@ -116,5 +119,5 @@ public class Commands {
 }
 
 interface Keywords {
-    public String process(List<String> args, Data data);
+    public String process(List<String> args, Data data, ServerConfig serverConfig);
 }

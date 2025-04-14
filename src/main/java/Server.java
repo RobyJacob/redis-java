@@ -4,37 +4,30 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
+import java.security.SecureRandom;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
     private ServerSocket serverSocket = null;
-    private int port = 6379;
     private ExecutorService threadPool = null;
-    private int num_threads = 5;
-    private static Map<String, String> masterAddr = new HashMap<>();
+    private ServerConfig serverConfig = new ServerConfig();
 
-    Server() throws IOException {
-        initServer();
-    }
-
-    Server(int port, int num_threads) throws IOException {
-        this.port = port;
-        this.num_threads = num_threads;
-        initServer();
-    }
-
-    Server(int port) throws IOException {
-        this.port = port;
+    Server(ServerConfig config) throws IOException {
+        serverConfig = config;
         initServer();
     }
 
     private void initServer() throws IOException {
-        serverSocket = new ServerSocket(port);
+        serverSocket = new ServerSocket(serverConfig.getPort());
         serverSocket.setReuseAddress(true);
-        threadPool = Executors.newFixedThreadPool(this.num_threads);
+        threadPool = Executors.newFixedThreadPool(serverConfig.getNumThreads());
+
+        if (serverConfig.isMaster()) {
+            serverConfig.setReplicationId(generateRandomReplicationId());
+            serverConfig.setReplicationOffset(0);
+        }
+
         System.out.println("Server started successfully");
     }
 
@@ -45,12 +38,12 @@ public class Server {
     public void listen() throws IOException {
         while (true) {
             Socket clientSocket = serverSocket.accept();
-            RespParser parser = new RespParser();
+            RespParser parser = new RespParser(serverConfig);
             BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
             this.threadPool.execute(() -> {
                 try {
-                    System.out.println("Server started listening on port " + port);
+                    System.out.println("Server started listening on port " + serverConfig.getPort());
                     String input;
 
                     while ((input = reader.readLine()) != null) {
@@ -74,11 +67,18 @@ public class Server {
             threadPool.shutdown();
     }
 
-    public static void setMaster(Map<String, String> masterAddr) {
-        Server.masterAddr.putAll(masterAddr);
-    }
+    private String generateRandomReplicationId() {
+        final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        final int STRING_LENGTH = 40;
+        final SecureRandom random = new SecureRandom();
 
-    public static Map<String, String> getMaster() {
-        return masterAddr;
+        StringBuilder builder = new StringBuilder(STRING_LENGTH);
+
+        for (int i = 0; i < STRING_LENGTH; i++) {
+            int randomIdx = random.nextInt(CHARACTERS.length());
+            builder.append(CHARACTERS.charAt(randomIdx));
+        }
+
+        return builder.toString();
     }
 }

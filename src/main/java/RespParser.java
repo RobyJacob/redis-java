@@ -26,11 +26,11 @@ public class RespParser {
     private Commands commands;
     private String resultResp;
 
-    RespParser() {
+    RespParser(ServerConfig config) {
         parsedValues = new ArrayList<>();
         expectedNumArgs = -1;
         size = -1;
-        commands = new Commands();
+        commands = new Commands(config);
     }
 
     public boolean feed(String respString) {

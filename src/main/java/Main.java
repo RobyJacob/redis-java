@@ -1,6 +1,4 @@
 import java.io.IOException;
-import java.util.Map;
-
 import org.apache.commons.cli.*;
 
 public class Main {
@@ -16,14 +14,13 @@ public class Main {
             CommandLineParser parser = new DefaultParser(false);
             CommandLine cmd = parser.parse(option, args);
 
-            if (cmd.hasOption("port")) server = new Server(Integer.parseInt(cmd.getOptionValue("port")));
-            else server = new Server();
+            ServerConfig serverConfig = new ServerConfig();
 
-            if (cmd.hasOption("replicaof")) {
-                String[] masterAddr = cmd.getOptionValue("replicaof").split(" ");
+            if (cmd.hasOption("port")) serverConfig.setPort(Integer.parseInt(cmd.getOptionValue("port")));
 
-                Server.setMaster(Map.of(masterAddr[0], masterAddr[1]));
-            }
+            if (cmd.hasOption("replicaof")) serverConfig.setMaster(false);
+
+            server = new Server(serverConfig);
 
             server.listen();
         } catch (IOException | ParseException e) {
