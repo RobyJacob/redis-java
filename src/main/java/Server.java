@@ -23,6 +23,11 @@ public class Server {
         initServer();
     }
 
+    Server (int port) throws IOException {
+        this.port = port;
+        initServer();
+    }
+
     private void initServer() throws IOException {
         serverSocket = new ServerSocket(port);
         serverSocket.setReuseAddress(true);
