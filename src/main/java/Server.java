@@ -83,21 +83,34 @@ public class Server {
         return builder.toString();
     }
 
-    private void pollMaster() throws IOException {
-        try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(serverConfig.getMasterHost(), serverConfig.getMasterPort()));
+    private boolean sendHandshake(Socket socket, String message, String expectedResponse) throws IOException {
+        boolean result = false;
 
-            var out = socket.getOutputStream();
-            var in = socket.getInputStream();
+        var out = socket.getOutputStream();
+        var in = socket.getInputStream();
 
-            out.write("*1\r\n$4\r\nPING\r\n".getBytes());
+        out.write(message.getBytes());
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-            String respone;
-            while ((respone = reader.readLine()) != null) {
-                if (respone.contains("PONG")) break;
-                throw new RuntimeException("Master server is not active/healthy");
-            }
+        BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+        String respone;
+        while ((respone = reader.readLine()) != null) {
+            if (respone.contains(expectedResponse)) result = true;
+            break;
         }
+
+        return result;
+    }
+
+    private void pollMaster() throws IOException {
+        Socket socket = new Socket();
+
+        socket.connect(new InetSocketAddress(serverConfig.getMasterHost(), serverConfig.getMasterPort()));
+
+        if (!(sendHandshake(socket, "*1\r\n$4\r\nPING\r\n", "PONG") 
+            && sendHandshake(socket, 
+                "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n%s\r\n".formatted(String.valueOf(serverConfig.getPort())), 
+                "OK") 
+            && sendHandshake(socket, "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n", "OK")))
+            throw new RuntimeException("Master server not active/healthy");
     }
 }

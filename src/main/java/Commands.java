@@ -82,6 +82,13 @@ public class Commands {
 
                 return response;
             }
+        }, 
+        
+        REPLCONF("replconf") {
+            @Override
+            public String process(List<String> args, Data data, ServerConfig config) {
+                return Utility.convertToResp("OK", RespParser.Operand.STRING);
+            }
         };
 
         private final String keyword;
