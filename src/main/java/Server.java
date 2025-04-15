@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -26,7 +27,7 @@ public class Server {
         if (serverConfig.isMaster()) {
             serverConfig.setReplicationId(generateRandomReplicationId());
             serverConfig.setReplicationOffset(0);
-        }
+        } else pollMaster();
 
         System.out.println("Server started successfully");
     }
@@ -80,5 +81,23 @@ public class Server {
         }
 
         return builder.toString();
+    }
+
+    private void pollMaster() throws IOException {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(serverConfig.getMasterHost(), serverConfig.getMasterPort()));
+
+            var out = socket.getOutputStream();
+            var in = socket.getInputStream();
+
+            out.write("*1\r\n$4\r\nPING\r\n".getBytes());
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+            String respone;
+            while ((respone = reader.readLine()) != null) {
+                if (respone.contains("PONG")) break;
+                throw new RuntimeException("Master server is not active/healthy");
+            }
+        }
     }
 }

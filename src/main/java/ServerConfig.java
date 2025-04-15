@@ -10,4 +10,6 @@ public class ServerConfig {
     private String host = "localhost";
     private int port = 6379;
     private int numThreads = 5;
+    private String masterHost = "localhost";
+    private int masterPort = 6379;
 }

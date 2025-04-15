@@ -18,7 +18,13 @@ public class Main {
 
             if (cmd.hasOption("port")) serverConfig.setPort(Integer.parseInt(cmd.getOptionValue("port")));
 
-            if (cmd.hasOption("replicaof")) serverConfig.setMaster(false);
+            if (cmd.hasOption("replicaof")) {
+                String[] masterAddr = cmd.getOptionValue("replicaof").split(" ");
+
+                serverConfig.setMaster(false);
+                serverConfig.setMasterHost(masterAddr[0]);
+                serverConfig.setMasterPort(Integer.parseInt(masterAddr[1]));
+            }
 
             server = new Server(serverConfig);
 
