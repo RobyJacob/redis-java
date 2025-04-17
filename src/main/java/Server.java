@@ -6,6 +6,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -27,7 +28,10 @@ public class Server {
         if (serverConfig.isMaster()) {
             serverConfig.setReplicationId(generateRandomReplicationId());
             serverConfig.setReplicationOffset(0);
-        } else pollMaster();
+        } else {
+            pollMaster();
+            serverConfig.setReplicas(List.of(serverConfig));
+        }
 
         System.out.println("Server started successfully");
     }
@@ -106,11 +110,24 @@ public class Server {
 
         socket.connect(new InetSocketAddress(serverConfig.getMasterHost(), serverConfig.getMasterPort()));
 
-        if (!(sendHandshake(socket, "*1\r\n$4\r\nPING\r\n", "PONG") 
+        String psyncCommand = "PSYNC ? -1";
+
+        if (!serverConfig.getReplicas().isEmpty()) {
+            psyncCommand = "PSYNC %s %s".formatted(serverConfig.getReplicationId(), serverConfig.getReplicationOffset());
+        }
+
+        boolean isHandshakeSuccessful = sendHandshake(socket, 
+            Utility.convertToResp("PING", RespParser.Operand.ARRAY), "PONG") 
             && sendHandshake(socket, 
-                "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n%s\r\n".formatted(String.valueOf(serverConfig.getPort())), 
-                "OK") 
-            && sendHandshake(socket, "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n", "OK")))
+                Utility.convertToResp("REPLCONF listening-port %s".formatted(serverConfig.getPort()), RespParser.Operand.ARRAY), "OK") 
+            && sendHandshake(socket, 
+                Utility.convertToResp("REPLCONF capa psync2", RespParser.Operand.ARRAY), "OK")
+            && sendHandshake(socket, 
+                Utility.convertToResp(psyncCommand, RespParser.Operand.ARRAY), "FULLRESYNC");
+
+        if (!isHandshakeSuccessful)
             throw new RuntimeException("Master server not active/healthy");
+        
+        socket.close();
     }
 }

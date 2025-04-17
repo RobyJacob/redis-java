@@ -89,6 +89,14 @@ public class Commands {
             public String process(List<String> args, Data data, ServerConfig config) {
                 return Utility.convertToResp("OK", RespParser.Operand.STRING);
             }
+        },
+        
+        PSYNC("psync") {
+            @Override
+            public String process(List<String> args, Data data, ServerConfig config) {
+                return Utility.convertToResp("FULLRESYNC %s %s".formatted(config.getReplicationId(), config.getReplicationOffset()), 
+                    RespParser.Operand.STRING);
+            }
         };
 
         private final String keyword;
