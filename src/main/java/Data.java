@@ -36,4 +36,8 @@ public class Data {
 
         return bufferMap.getOrDefault(key, null);
     }
+
+    public void saveData(String rdbFileContent) {
+        System.out.println("Saved to memory: " + rdbFileContent);
+    }
 }

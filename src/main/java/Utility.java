@@ -1,4 +1,4 @@
-import java.security.cert.CRL;
+import java.security.SecureRandom;
 
 public class Utility {
     private static final String CRLF = "\r\n";
@@ -41,6 +41,21 @@ public class Utility {
             
             default:
                 throw new IllegalArgumentException("Unsupported RESP type: %s".formatted(respType));
+        }
+
+        return builder.toString();
+    }
+
+    public static String generateReplicationId() {
+        final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        final int STRING_LENGTH = 40;
+        final SecureRandom random = new SecureRandom();
+
+        StringBuilder builder = new StringBuilder(STRING_LENGTH);
+
+        for (int i = 0; i < STRING_LENGTH; i++) {
+            int randomIdx = random.nextInt(CHARACTERS.length());
+            builder.append(CHARACTERS.charAt(randomIdx));
         }
 
         return builder.toString();

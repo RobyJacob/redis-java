@@ -24,26 +24,32 @@ public class RespParser {
     private int expectedNumArgs;
     private int size;
     private Commands commands;
+    private Config config;
     private String resultResp;
 
-    RespParser(ServerConfig config) {
+    RespParser(Config config, Data data) {
         parsedValues = new ArrayList<>();
         expectedNumArgs = -1;
         size = -1;
-        commands = new Commands(config);
+        this.config = config;
+        commands = new Commands(config, data);
     }
 
     public boolean feed(String respString) {
         Character prefix = respString.charAt(0);
-        
-        switch(prefix) {
+
+        switch (prefix) {
             case '*':
                 expectedNumArgs = Integer.parseInt(respString.substring(1));
                 break;
             case '$':
                 size = Integer.parseInt(respString.substring(1));
                 break;
-            
+            case '+':
+                parsedValues.clear();
+                parsedValues.add(respString.substring(1));
+                break;
+
             default:
                 if (size == respString.length()) {
                     parsedValues.add(respString);
@@ -63,16 +69,20 @@ public class RespParser {
         return resultResp;
     }
 
+    public List<String> getParsedValues() {
+        return parsedValues;
+    }
+
     private void processParsedValues() {
         String command = parsedValues.get(0);
         boolean withArg = expectedNumArgs > 1;
         List<String> arg = withArg ? parsedValues.subList(1, parsedValues.size()) : Collections.emptyList();
 
         if (commands.isCommand(command)) {
-            commands.add(command); 
+            commands.add(command);
 
             if (withArg) commands.addArg(arg);
-            
+
             resultResp = commands.process();
         } else {
             throw new RuntimeException("Invalid command found: %s".formatted(command));

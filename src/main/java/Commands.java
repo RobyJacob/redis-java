@@ -9,12 +9,12 @@ public class Commands {
 
     private Data data;
 
-    private ServerConfig serverConfig;
+    private Config serverConfig;
 
-    Commands(ServerConfig serverConfig) {
+    Commands(Config serverConfig, Data data) {
         commandMap = new HashMap<>();
         arguments = new ArrayList<>();
-        data = new Data();
+        this.data = data;
         this.serverConfig = serverConfig;
         Arrays.stream(CommandKeywords.values()).forEach(k -> commandMap.put(k.toString(), k));
     }
@@ -22,9 +22,9 @@ public class Commands {
     enum CommandKeywords implements Keywords {
         GET("get") {
             @Override
-            public String process(List<String> args, Data data, ServerConfig config) {
+            public String process(List<String> args, Data data, Config config) {
                 String key = data.get(args.get(0));
-                
+
                 if (key == null)
                     return Utility.convertToResp("1", RespParser.Operand.ERROR);
 
@@ -34,7 +34,7 @@ public class Commands {
 
         SET("set") {
             @Override
-            public String process(List<String> args, Data data, ServerConfig config) {
+            public String process(List<String> args, Data data, Config config) {
                 String key = args.get(0);
                 String val = args.get(1);
 
@@ -51,7 +51,7 @@ public class Commands {
 
         ECHO("echo") {
             @Override
-            public String process(List<String> args, Data data, ServerConfig config) {
+            public String process(List<String> args, Data data, Config config) {
                 String echoedString = args.get(0);
                 return Utility.convertToResp(echoedString, RespParser.Operand.BULKSTRING);
             }
@@ -59,43 +59,46 @@ public class Commands {
 
         PING("ping") {
             @Override
-            public String process(List<String> args, Data data, ServerConfig config) {
+            public String process(List<String> args, Data data, Config config) {
                 return Utility.convertToResp("PONG", RespParser.Operand.BULKSTRING);
             }
         },
-        
+
         INFO("info") {
             @Override
-            public String process(List<String> args, Data data, ServerConfig config) {
+            public String process(List<String> args, Data data, Config config) {
                 String arg = args.get(0).toLowerCase();
                 String response = "";
                 String infoMessage = "role:master\nmaster_replid:%s\nmaster_repl_offset:%d"
-                    .formatted(config.getReplicationId(), config.getReplicationOffset());
+                        .formatted(config.getReplicationId(), config.getReplicationOffset());
 
                 switch (arg) {
                     case "replication":
-                        if (!config.isMaster()) infoMessage = "role:slave";
-                        
+                        if (!config.isMaster())
+                            infoMessage = "role:slave";
+
                         response = Utility.convertToResp(infoMessage, RespParser.Operand.BULKSTRING);
                         break;
                 }
 
                 return response;
             }
-        }, 
-        
+        },
+
         REPLCONF("replconf") {
             @Override
-            public String process(List<String> args, Data data, ServerConfig config) {
+            public String process(List<String> args, Data data, Config config) {
                 return Utility.convertToResp("OK", RespParser.Operand.STRING);
             }
         },
-        
+
         PSYNC("psync") {
             @Override
-            public String process(List<String> args, Data data, ServerConfig config) {
-                return Utility.convertToResp("FULLRESYNC %s %s".formatted(config.getReplicationId(), config.getReplicationOffset()), 
-                    RespParser.Operand.STRING);
+            public String process(List<String> args, Data data, Config config) {
+                String response = "FULLRESYNC %s %s".formatted(config.getReplicationId(),
+                        config.getReplicationOffset());
+
+                return Utility.convertToResp(response, RespParser.Operand.STRING);
             }
         };
 
@@ -135,5 +138,5 @@ public class Commands {
 }
 
 interface Keywords {
-    public String process(List<String> args, Data data, ServerConfig serverConfig);
+    public String process(List<String> args, Data data, Config config);
 }
