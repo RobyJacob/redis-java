@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.io.BufferedReader;
@@ -11,8 +12,7 @@ public class ReplicaServer implements Server {
     private Socket masterSocket;
     private ServerSocket serverSocket;
     private Config config;
-    private ExecutorService clientThreadPool;
-    private ExecutorService masterThread;
+    private ExecutorService executor;
     private Data data;
     private RespParser masterParser;
 
@@ -27,69 +27,76 @@ public class ReplicaServer implements Server {
 
         data = new Data();
 
-        clientThreadPool = Executors.newFixedThreadPool(config.getNumThreads());
-        masterThread = Executors.newSingleThreadExecutor();
+        executor = SharedExecutor.getExecutor();
 
         masterParser = new RespParser(config, data);
 
-        masterThread.execute(() -> {
-            try {
-                pollMaster();
-                this.config.setInitialBoot(false);
-                listenToMaster();
-            } catch (IOException e) {
-                throw new RuntimeException("Error while communicating to master server", e);
-            }
+        executor.execute(() -> {
+            pollMaster();
+            this.config.setInitialBoot(false);
+            listenToMaster();
         });
     }
 
-    private boolean sendHandshake(Socket masterSocket, String message, String expectedResponse) throws IOException {
+    private boolean sendHandshake(Socket masterSocket, String message, String expectedResponse) {
         boolean result = false;
 
-        var out = masterSocket.getOutputStream();
-        var in = masterSocket.getInputStream();
+        try {
 
-        out.write(message.getBytes());
-        out.flush();
+            var out = masterSocket.getOutputStream();
+            var in = masterSocket.getInputStream();
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-        String response;
-        while ((response = reader.readLine()) != null) {
-            System.out.println("Replica received handshake response: %s".formatted(response));
+            out.write(message.getBytes());
+            out.flush();
 
-            if (!masterParser.feed(response) && !masterParser.getParsedValues().isEmpty()) {
-                String parsedValue = masterParser.getParsedValues().get(0);
-                if (parsedValue.contains(expectedResponse)) {
-                    result = true;
-                    break;
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+            String response;
+
+            masterParser.reset();
+
+            while ((response = reader.readLine()) != null) {
+                System.out.println("Replica received handshake response: %s".formatted(response));
+
+                if (!masterParser.feed(response) && !masterParser.getParsedValues().isEmpty()) {
+                    String parsedValue = masterParser.getParsedValues().get(0);
+                    if (parsedValue.contains(expectedResponse)) {
+                        result = true;
+                        break;
+                    }
                 }
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         return result;
     }
 
-    private boolean checkIfRdbFileReceived() throws IOException {
-        var in = masterSocket.getInputStream();
+    private boolean checkIfRdbFileReceived() {
+        try {
+            var in = masterSocket.getInputStream();
 
-        byte[] response = in.readNBytes(3);
-        String responseString = new String(response);
-        if (!responseString.isEmpty() && responseString.startsWith("$")) {
-            int rdbFileSize = Integer.parseInt(responseString.substring(1));
-            System.out.println("RDB file size: " + rdbFileSize);
+            byte[] response = in.readNBytes(3);
+            String responseString = new String(response);
+            if (!responseString.isEmpty() && responseString.startsWith("$")) {
+                int rdbFileSize = Integer.parseInt(responseString.substring(1));
+                System.out.println("RDB file size: " + rdbFileSize);
 
-            response = in.readNBytes(rdbFileSize);
+                response = in.readNBytes(rdbFileSize);
 
-            if (response.length == rdbFileSize) {
-                System.out.println("Successfully received RDB file");
-                return true;
+                if (response.length == rdbFileSize) {
+                    System.out.println("Successfully received RDB file");
+                    return true;
+                }
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         return false;
     }
 
-    private void pollMaster() throws IOException {
+    private void pollMaster() {
         String psyncCommand = "PSYNC ? -1";
 
         if (!config.isInitialBoot()) {
@@ -110,20 +117,30 @@ public class ReplicaServer implements Server {
                 && checkIfRdbFileReceived();
 
         if (!isHandshakeSuccessful)
-            throw new RuntimeException("Master server is not active/healthy\n");
+            System.err.println("Failed to establish connection with master");
     }
 
-    private void listenToMaster() throws IOException {
-        var in = masterSocket.getInputStream();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-        String response;
+    private void listenToMaster() {
+        try {
+            var in = masterSocket.getInputStream();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+            String response;
 
-        while ((response = reader.readLine()) != null) {
-            System.out.println("Replica received: " + response);
-
-            if (masterParser.feed(response)) {
-                data.saveData(masterParser.getParsedValues().get(0));
+            while (in.available() > 0) {
+                in.read();
             }
+
+            masterParser.reset();
+
+            while ((response = reader.readLine()) != null) {
+                System.out.println("Replica received: " + response);
+
+                if (masterParser.feed(response)) {
+                    masterParser.reset();
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -133,10 +150,17 @@ public class ReplicaServer implements Server {
             masterSocket.close();
         if (serverSocket != null)
             serverSocket.close();
-        if (masterThread != null)
-            masterThread.shutdown();
-        if (clientThreadPool != null)
-            clientThreadPool.shutdown();
+        if (executor != null) {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     @Override
@@ -145,7 +169,7 @@ public class ReplicaServer implements Server {
             Socket clienSocket = serverSocket.accept();
             System.out.println("Replica server started listening on port " + config.getPort());
 
-            clientThreadPool.execute(() -> {
+            executor.execute(() -> {
                 try {
                     var in = clienSocket.getInputStream();
                     var out = clienSocket.getOutputStream();
@@ -161,10 +185,11 @@ public class ReplicaServer implements Server {
                             var parserResponse = clientParser.getResult();
                             out.write(parserResponse.getBytes());
                             out.flush();
+                            clientParser.reset();
                         }
                     }
                 } catch (IOException e) {
-                    throw new RuntimeException(e.getMessage());
+                    e.printStackTrace();
                 }
             });
         }

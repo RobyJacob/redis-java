@@ -1,14 +1,14 @@
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Data {
     private Map<String, String> bufferMap;
     private Map<String, List<Long>> keyExpiry;
 
     Data () {
-        bufferMap = new HashMap<>();
-        keyExpiry = new HashMap<>();
+        bufferMap = new ConcurrentHashMap<>();
+        keyExpiry = new ConcurrentHashMap<>();
     }
 
     public void add(String key, String value) {
@@ -35,9 +35,5 @@ public class Data {
         }
 
         return bufferMap.getOrDefault(key, null);
-    }
-
-    public void saveData(String rdbFileContent) {
-        System.out.println("Saved to memory: " + rdbFileContent);
     }
 }
