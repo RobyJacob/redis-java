@@ -24,15 +24,15 @@ public class RespParser {
     private int expectedNumArgs;
     private int size;
     private Commands commands;
-    private Config config;
+    private String commandType;
     private String resultResp;
 
     RespParser(Config config, Data data) {
         parsedValues = new ArrayList<>();
         expectedNumArgs = -1;
         size = -1;
-        this.config = config;
         commands = new Commands(config, data);
+        resultResp = new String();
     }
 
     public boolean feed(String respString) {
@@ -46,7 +46,6 @@ public class RespParser {
                 size = Integer.parseInt(respString.substring(1));
                 break;
             case '+':
-                parsedValues.clear();
                 parsedValues.add(respString.substring(1));
                 break;
 
@@ -81,13 +80,32 @@ public class RespParser {
         if (commands.isCommand(command)) {
             commands.add(command);
 
+            commandType = getCommandType();
+
             if (withArg) commands.addArg(arg);
 
             resultResp = commands.process();
         } else {
             throw new RuntimeException("Invalid command found: %s".formatted(command));
         }
+    }
 
+    private String getCommandType() {
+        if (parsedValues.isEmpty()) return "unknown";
+
+        String command = parsedValues.get(0).toLowerCase();
+            
+        if (Commands.readCommands.contains(command)) return "read";
+        else if (Commands.writeCommands.contains(command)) return "write";
+        else if (Commands.adminCommands.contains(command)) return "admin";
+        else return "unknown";
+    }
+
+    public String commandType() {
+        return commandType;
+    }
+
+    public void reset() {
         parsedValues.clear();
         expectedNumArgs = -1;
         size = -1;

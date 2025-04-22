@@ -11,6 +11,12 @@ public class Commands {
 
     private Config serverConfig;
 
+    public static final List<String> readCommands = List.of("get", "echo", "ping", "info");
+
+    public static final List<String> writeCommands = List.of("set");
+
+    public static final List<String> adminCommands = List.of("psync", "replconf");
+
     Commands(Config serverConfig, Data data) {
         commandMap = new HashMap<>();
         arguments = new ArrayList<>();
