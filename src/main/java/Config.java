@@ -4,7 +4,6 @@ import lombok.Setter;
 import java.net.Socket;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Consumer;
 
 @Getter
 @Setter

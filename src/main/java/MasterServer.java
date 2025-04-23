@@ -6,11 +6,8 @@ import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.Base64;
-import java.util.List;
 import java.util.function.Consumer;
 
 public class MasterServer implements Server {
@@ -75,6 +72,10 @@ public class MasterServer implements Server {
                                 }
                             }
 
+                            if (input.contains("psync") || input.contains("PSYNC")) {
+                                config.addReplica(clientSocket);
+                            }
+
                             var parserResponse = parser.getResult();
 
                             out.write(parserResponse.getBytes());
@@ -114,8 +115,6 @@ public class MasterServer implements Server {
     private void startFullResync(Socket connection) {
         executor.execute(() -> {
             try {
-                config.addReplica(connection);
-
                 byte[] data = Base64.getDecoder().decode(
                         "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==");
 
